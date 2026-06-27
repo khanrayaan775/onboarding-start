@@ -1,0 +1,94 @@
+`default_nettype none
+module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi, output reg [7:0]enregout7_0, output reg [7:0]enregout15_8, output reg [7:0]enpwmmode7_0, output reg [7:0]enpwmmode15_8, output reg [7:0]pwmdutycycle);
+
+    // first thing: need the 2-stage flip-flop to synchronise the external and internal clocks
+        //declarations for sampling registers
+    reg sclk_1;
+    reg sclk_2;
+    reg sclk_3;
+    reg copi_1;
+    reg copi_2;
+    reg ncs_1;
+    reg ncs_2;
+        // run every clock cycle
+    always@(posedge clk or negedge rst_n) begin
+        // reset logic
+    if (!rst_n) begin sclk_1<=0; sclk_2<=0; sclk_3<=0; copi_1<=0;copi_2<=0;ncs_1<=0;ncs_2<=0; end 
+    else begin
+        // sampling 3 times for sclk, 2 times fo copi and ncs.
+        sclk_1 <= sclk;
+        sclk_2 <= sclk_1;
+        sclk_3 <= sclk_2;
+        copi_1 <= copi;
+        copi_2 <= copi_1;
+        ncs_1 <= ncs;
+        ncs_2 <= ncs_1;
+     end
+    end
+    // edge detection logic for sclk, ncs
+    wire sclk_rising = (sclk_2 ==1) & (sclk_3 ==0);
+    wire ncs_posedge = (ncs_1 ==1) & (ncs_2 ==0);
+
+// next, need the block that starts transmission on ncs_2 == 0, does sampling at sclk_rising, does transmission logic
+    reg [15:0]shift_reg;
+    reg [3:0]count;
+    reg transaction_finished;
+    reg transaction_ready;
+
+    always@(posedge clk or negedge rst_n)begin 
+        // reset block 
+        if(!rst_n) begin
+            count <= 4'd0;
+            shift_reg <= 16'd0;
+            transaction_ready <= 1'd0;
+        end 
+        // when ncs_2 = 0 (active low), check if rising edge on sclk, if yes, sample and increment till ncs_2 is 1 (transmision complete)
+        else if(!ncs_2) begin
+            if(sclk_rising) begin
+                shift_reg[15-count] <= copi_2;
+                count <= count+1;
+            end
+            // if transmission is complete, when ncs is on its positve edge (transitions), start the transaction.
+        end else if(ncs_posedge) begin transaction_ready <= 1'd1; end 
+            // when the other block confirms the transation is complete, set transaction ready back to 0 (before) transmission starts again.
+        else if(transaction_finished) begin transaction_ready <= 1'd0; count <= 4'd0; end
+        end
+    
+    // second always block for transaction logic
+    // need a wire for "data", "address" , makes things cleaner
+    wire [7:0]data = shift_reg[7:0];
+    wire [6:0]address = shift_reg[14:8];
+    always @(posedge clk or negedge rst_n) begin
+
+        // reset block
+        if(!rst_n) begin transaction_finished <= 1'd0; 
+        enregout7_0 <= 8'd0;
+        enregout15_8 <= 8'd0;
+        enpwmmode7_0 <= 8'd0;
+        enpwmmode15_8 <= 8'd0;
+        pwmdutycycle <= 8'd0;
+        
+        end
+
+        // if transaction start approval from first block 
+        else if(transaction_ready) begin 
+            // need to verify "count", verify valid address, move to correct output register using case
+     
+        if (count==16) begin
+            case(address)
+            7'h00 : enregout7_0 <= data ;
+            7'h01 : enregout15_8 <= data;
+            7'h02 : enpwmmode7_0 <= data;
+            7'h03 : enpwmmode15_8 <= data;
+            7'h04 : pwmdutycycle <= data;
+            default: ;
+            endcase
+        transaction_finished <= 1;
+        // "handshake mechanism" -> first block sees the line above, sets tready to 0, second block then executes below, sets tfinished to 0
+        end else if(transaction_finished && !transaction_ready) begin 
+            transaction_finished <= 0;
+        end
+        end
+
+    end
+ endmodule
