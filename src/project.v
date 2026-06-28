@@ -41,6 +41,10 @@ module tt_um_uwasic_onboarding_Rayaan_Khan (
     .enpwmmode15_8(en_reg_pwm_15_8),
     .pwmdutycycle(pwm_duty_cycle));
 
+  // declaring intermediate wire for pwm to avoid error
+  wire [15:0]pwm_out;
+  assign  {uio_out, uo_out} = pwm_out;
+
   pwm_peripheral pwm_peripheral_inst (
     .clk(clk),
     .rst_n(rst_n),
@@ -49,7 +53,7 @@ module tt_um_uwasic_onboarding_Rayaan_Khan (
     .en_reg_pwm_7_0(en_reg_pwm_7_0),
     .en_reg_pwm_15_8(en_reg_pwm_15_8),
     .pwm_duty_cycle(pwm_duty_cycle),
-    .out({uio_out, uo_out})
+    .out(pwm_out)
   );
 
 
