@@ -31,14 +31,14 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
 
 // next, need the block that starts transmission on ncs_2 == 0, does sampling at sclk_rising, does transmission logic
     reg [15:0]shift_reg;
-    reg [3:0]count;
+    reg [4:0]count;
     reg transaction_finished;
     reg transaction_ready;
 
     always@(posedge clk or negedge rst_n)begin 
         // reset block 
         if(!rst_n) begin
-            count <= 4'd0;
+            count <= 5'd0;
             shift_reg <= 16'd0;
             transaction_ready <= 1'd0;
         end 
@@ -51,7 +51,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
             // if transmission is complete, when ncs is on its positve edge (transitions), start the transaction.
         end else if(ncs_posedge) begin transaction_ready <= 1'd1; end 
             // when the other block confirms the transation is complete, set transaction ready back to 0 (before) transmission starts again.
-        else if(transaction_finished) begin transaction_ready <= 1'd0; count <= 4'd0; end
+        else if(transaction_finished) begin transaction_ready <= 1'd0; count <= 5'd0; end
         end
     
     // second always block for transaction logic
@@ -74,7 +74,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
         else if(transaction_ready) begin 
             // need to verify "count", verify valid address, move to correct output register using case
      
-        if (count==16) begin
+        if (count==5'd16) begin
             case(address)
             7'h00 : enregout7_0 <= data ;
             7'h01 : enregout15_8 <= data;
@@ -87,7 +87,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
         // "handshake mechanism" -> first block sees the line above, sets tready to 0, second block then executes below, sets tfinished to 0
         end else if(transaction_finished && !transaction_ready) begin 
             transaction_finished <= 0;
-        end
+        end 
         end
 
     end
