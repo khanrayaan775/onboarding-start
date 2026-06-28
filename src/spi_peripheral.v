@@ -42,6 +42,11 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
             shift_reg <= 16'd0;
             transaction_ready <= 1'd0;
         end 
+        // TRANSACTION LOGIC PLACED FIRST AFTER ANALYZING GDS WAVEFORM
+        else if(ncs_posedge && count == 5'd16) begin transaction_ready <= 1'd1; end 
+            // when the other block confirms the transation is complete, set transaction ready back to 0 (before) transmission starts again.
+        else if(transaction_finished) begin transaction_ready <= 1'd0; count <= 5'd0; end
+        // TRANSMISSION LOGIC PLACED SECOND AFTER ANALYZING GDS WAVEFORM
         // when ncs_2 = 0 (active low), check if rising edge on sclk, if yes, sample and increment till ncs_2 is 1 (transmision complete)
         else if(!ncs_2) begin
             if(sclk_rising) begin
@@ -49,9 +54,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
                 count <= count+1;
             end
             // if transmission is complete, when ncs is on its positve edge (transitions), start the transaction.
-        end else if(ncs_posedge) begin transaction_ready <= 1'd1; end 
-            // when the other block confirms the transation is complete, set transaction ready back to 0 (before) transmission starts again.
-        else if(transaction_finished) begin transaction_ready <= 1'd0; count <= 5'd0; end
+        end 
         end
     
     // second always block for transaction logic
@@ -72,9 +75,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
 
         // if transaction start approval from first block 
         else if(transaction_ready) begin 
-            // need to verify "count", verify valid address, move to correct output register using case
-     
-        if (count==5'd16) begin
+            // need to verify "count", verify valid address, move to correct output register using case 
             case(address)
             7'h00 : enregout7_0 <= data ;
             7'h01 : enregout15_8 <= data;
@@ -88,7 +89,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
         end else if(transaction_finished && !transaction_ready) begin 
             transaction_finished <= 0;
         end 
-        end
+        
 
     end
  endmodule
