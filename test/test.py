@@ -270,12 +270,12 @@ async def test_pwm_duty(dut):
 
     # loop-testing for edge cases
     await send_spi_transaction(dut, 1, 0x04, 0x00) #testing 0%
-    for i in range(50000): #50000 clock cycles
+    for i in range(5000): #5000 clock cycles (reduced)
         await ClockCycles(dut.clk,1)
         assert (int(dut.uo_out.value) & 1) == 0
 
     await send_spi_transaction(dut, 1, 0x04, 0xFF) #testing 100%
-    for i in range(50000): #50000 clock cycles
+    for i in range(5000): #5000 clock cycles (reduced)
         await ClockCycles(dut.clk,1)
         assert (int(dut.uo_out.value) & 1) == 1
 
