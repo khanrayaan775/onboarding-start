@@ -30,7 +30,9 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
     wire ncs_posedge = (ncs_1 ==1) & (ncs_2 ==0);
 
 // next, need the block that starts transmission on ncs_2 == 0, does sampling at sclk_rising, does transmission logic, AND transaction logc (edit)
-    reg [14:0]shift_reg;
+    /* verilator lint_off UNUSEDSIGNAL */
+    reg [15:0]shift_reg;
+    /* verilator lint_on UNUSEDSIGNAL */
     reg [4:0]count;
       // need a wire for "data", "address" , makes things cleaner
     wire [7:0]data = shift_reg[7:0];
@@ -41,7 +43,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
         // reset block 
         if(!rst_n) begin
             count <= 5'd0;
-            shift_reg <= 15'd0;
+            shift_reg <= 16'd0;
             enregout7_0 <= 8'd0;
             enregout15_8 <= 8'd0;
             enpwmmode7_0 <= 8'd0;
@@ -66,9 +68,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
         // when ncs_2 = 0 (active low), check if rising edge on sclk, if yes, sample and increment till ncs_2 is 1 (transmision complete)
         else if(!ncs_2) begin
             if(sclk_rising) begin
-               if (count>0) begin
                  shift_reg[15-count] <= copi_2;
-                  end
                count <= count+1;
             end
         end 
