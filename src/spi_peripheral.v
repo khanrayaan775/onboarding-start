@@ -30,7 +30,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
     wire ncs_posedge = (ncs_1 ==1) & (ncs_2 ==0);
 
 // next, need the block that starts transmission on ncs_2 == 0, does sampling at sclk_rising, does transmission logic
-    reg [15:0]shift_reg;
+    reg [14:0]shift_reg;
     reg [4:0]count;
     reg transaction_finished;
     reg transaction_ready;
@@ -39,7 +39,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
         // reset block 
         if(!rst_n) begin
             count <= 5'd0;
-            shift_reg <= 16'd0;
+            shift_reg <= 15'd0;
             transaction_ready <= 1'd0;
         end 
         // TRANSACTION LOGIC PLACED FIRST AFTER ANALYZING GDS WAVEFORM
@@ -50,8 +50,10 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
         // when ncs_2 = 0 (active low), check if rising edge on sclk, if yes, sample and increment till ncs_2 is 1 (transmision complete)
         else if(!ncs_2) begin
             if(sclk_rising) begin
-                shift_reg[15-count] <= copi_2;
+                if (count>=5'd1) begin
+                shift_reg[14-(count-1)] <= copi_2;
                 count <= count+1;
+                end
             end
             // if transmission is complete, when ncs is on its positve edge (transitions), start the transaction.
         end 
