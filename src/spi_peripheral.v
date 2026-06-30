@@ -50,7 +50,7 @@ module spi_peripheral (input clk, input rst_n, input sclk, input ncs, input copi
         
         end 
         // TRANSACTION LOGIC PLACED FIRST AFTER ANALYZING GDS WAVEFORM
-        else if(ncs_posedge && count[4] == 1) begin
+        else if(ncs_posedge && count[4] && shift_reg[15]) begin
 
             case(address)
             7'h00 : enregout7_0 <= data ;
