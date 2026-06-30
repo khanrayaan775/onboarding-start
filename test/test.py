@@ -218,7 +218,7 @@ async def test_pwm_duty(dut):
     #preparing for measuring
     # power on 
     dut.ena.value = 1
-    # the spi bus being idle whilst hte chip resets....
+    # the spi bus being idle whilst the chip resets....
     dut.ui_in.value = ui_in_logicarray(1, 0, 0)
     # active low reset
     dut.rst_n.value = 0 
@@ -279,5 +279,48 @@ async def test_pwm_duty(dut):
         await ClockCycles(dut.clk,1)
         assert (int(dut.uo_out.value) & 1) == 1
 
-
     dut._log.info("PWM Duty Cycle test completed successfully")
+
+@cocotb.test()
+async def test_pwm_output_enable(dut):
+    # output enable test - need to check for all (2) combos
+
+    # Set the clock period to 100 ns (10 MHz)
+    clock = Clock(dut.clk, 100, units="ns")
+    cocotb.start_soon(clock.start())
+
+    #preparing for measuring
+    # power on 
+    dut.ena.value = 1
+    # the spi bus being idle whilst the chip resets....
+    dut.ui_in.value = ui_in_logicarray(1, 0, 0)
+    # active low reset
+    dut.rst_n.value = 0 
+    # wait 5 clock cycles
+    await ClockCycles(dut.clk, 5)
+    # release
+    dut.rst_n.value = 1
+    # sending SPI transactions
+    # enabling first bit ONLY
+    await send_spi_transaction(dut, 1, 0x00, 0x01)
+    # enabling pwm on first bit ONLY
+    await send_spi_transaction(dut, 1, 0x02, 0x01)
+    # setting pwm duty cycle to 50% : 0x80 -> 128
+    await send_spi_transaction(dut, 1, 0x04, 0x80)
+
+
+    #checking for output disabled 
+    await send_spi_transaction(dut, 1, 0x00, 0x00)
+    await send_spi_transaction(dut, 1, 0x02, 0x01) #testing if it pwm is overriden
+    await ClockCycles(dut.clk,3000)
+    assert (int(dut.uo_out.value)&1) == 0
+
+    #checking for output enable, pwm mode bit disabled
+    await send_spi_transaction(dut, 1, 0x00, 0x01)
+    await send_spi_transaction(dut, 1, 0x02, 0x00)
+    await ClockCycles(dut.clk,3000)
+    assert (int(dut.uo_out.value)&1) == 1
+    
+    # other scenario (output enabled, pwm enabled) checked for implicity in other 2 funcs
+
+    dut._log.info("PWM output enable test completed successfully")
